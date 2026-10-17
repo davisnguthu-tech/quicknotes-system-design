@@ -36,6 +36,60 @@ async function request(url, options = {}) {
   return response;
 }
 
+/*
+ * JSONPlaceholder Note on Mock Behavior:
+ * JSONPlaceholder is a fake REST API. Sending a DELETE request simulates a 
+ * 200/204 response from the server, but does NOT actually alter or persist data on the backend.
+ * Therefore, upon receiving a successful status code, we explicitly remove the note 
+ * element from the DOM to deliver a realistic user experience.
+ */
+async function deleteNote(id, element) {
+  setStatus('Deleting note...', 'loading');
+  setButtonsDisabled(true);
+
+  try {
+    const res = await request(`${API_URL}/${id}`, { method: 'DELETE' });
+    element.remove();
+    setStatus(`Note deleted (status ${res.status}).`, 'success');
+
+    if (notesList.children.length === 0) {
+      setStatus('No notes remaining.', 'empty');
+    }
+  } catch (error) {
+    setStatus(`Failed to delete note: ${error.message}`, 'error');
+  } finally {
+    setButtonsDisabled(false);
+  }
+}
+
+// Helper to create note element
+function createNoteElement(note) {
+  const li = document.createElement('li');
+  li.className = 'note-item';
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'note-content';
+
+  const h3 = document.createElement('h3');
+  h3.textContent = note.title;
+
+  const p = document.createElement('p');
+  p.textContent = note.body;
+
+  contentDiv.appendChild(h3);
+  contentDiv.appendChild(p);
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'delete-btn';
+  delBtn.textContent = 'Delete';
+  delBtn.addEventListener('click', () => deleteNote(note.id, li));
+
+  li.appendChild(contentDiv);
+  li.appendChild(delBtn);
+
+  return li;
+}
+
 // Render notes to list
 function renderNotes(notes) {
   notesList.innerHTML = '';
@@ -45,28 +99,8 @@ function renderNotes(notes) {
   }
 
   notes.forEach(note => {
-    const li = document.createElement('li');
-    li.className = 'note-item';
-
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'note-content';
-
-    const h3 = document.createElement('h3');
-    h3.textContent = note.title;
-
-    const p = document.createElement('p');
-    p.textContent = note.body;
-
-    contentDiv.appendChild(h3);
-    contentDiv.appendChild(p);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'delete-btn';
-    delBtn.textContent = 'Delete';
-
-    li.appendChild(contentDiv);
-    li.appendChild(delBtn);
-    notesList.appendChild(li);
+    const noteEl = createNoteElement(note);
+    notesList.appendChild(noteEl);
   });
 }
 
@@ -87,9 +121,7 @@ async function loadNotes() {
   }
 }
 
-// =================================================================
-// ADD TASK 2 (POST) HERE
-// =================================================================
+// TASK 2: POST Note
 async function createNote(event) {
   event.preventDefault();
 
@@ -126,30 +158,8 @@ async function createNote(event) {
       notesList.innerHTML = '';
     }
 
-    const li = document.createElement('li');
-    li.className = 'note-item';
-
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'note-content';
-
-    const h3 = document.createElement('h3');
-    h3.textContent = newNote.title;
-
-    const p = document.createElement('p');
-    p.textContent = newNote.body;
-
-    contentDiv.appendChild(h3);
-    contentDiv.appendChild(p);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'delete-btn';
-    delBtn.textContent = 'Delete';
-
-    li.appendChild(contentDiv);
-    li.appendChild(delBtn);
-
-    // Prepend to top of UI list
-    notesList.prepend(li);
+    const noteEl = createNoteElement(newNote);
+    notesList.prepend(noteEl);
 
     // Clear input fields
     titleInput.value = '';
@@ -165,4 +175,4 @@ async function createNote(event) {
 
 // Event Listeners
 loadBtn.addEventListener('click', loadNotes);
-noteForm.addEventListener('submit', createNote); // ADD THIS EVENT LISTENER AT THE BOTTOM
+noteForm.addEventListener('submit', createNote);
